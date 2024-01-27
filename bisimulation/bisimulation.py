@@ -1,20 +1,8 @@
-import itertools
-
-import numpy as np
-
-import pandas as pd
-
-import seaborn as sns
-
-import matplotlib.pyplot as plt
-
 import seaborn as sns
 
 import networkx as nx
 
 import rustworkx as rx
-
-
 
 from bispy import compute_maximum_bisimulation, Algorithms
 from llist import dllist
@@ -31,10 +19,7 @@ from bispy.paige_tarjan.paige_tarjan import paige_tarjan_qblocks
 from typing import Union, List, Dict, Any, Tuple
 from bispy.utilities.graph_entities import _QBlock, _Vertex
 
-
-
-
-from typing import Dict, Tuple, Any, List
+import matplotlib.pyplot as plt
 
 from bispy.saha.saha_partition import saha_algorithm
 
@@ -76,122 +61,66 @@ from bispy.utilities.graph_normalization import (
     convert_to_integer_graph,
     back_to_original,
 )
-# Erstellen der zufälligen Di.Graphen
 
-def generate_random_digraph(node_counts: list[int], sparsity: list[float], one_divided_samplerate: int):
-    # Generate a random binary adjacency matrix for a digraph with the given sparsity
-    adj_matrix_factory = lambda n, s, samples: np.random.choice([0, 1], size=(n, n, samples), p=[s, 1 - s])
-    graph_factory = lambda adj_matrix: nx.from_numpy_array(adj_matrix, create_using = nx.DiGraph)
-    
-    possible_graphs = [adj_matrix_factory(n, s, n**2//one_divided_samplerate) for n, s in itertools.product(node_counts, sparsity)]
-    graphs = [[graph_factory(adj_matrix[:,:,i]) for i in range(adj_matrix.shape[2])] for adj_matrix in possible_graphs]
-    
-    return graphs
+#Here we built the graph from the Stanford Encyclopedia by hand to test the bisimulation algo. 
+#We immediately noticed that the equivalence classes differed from the specification in the script. 
+#Prof. Moss (University of Indiana) has already written about this, I have attached the e-mail at the very end. 
 
 
-# Beispiel: Verwendung der Funktion
-node_counts = [10, 20]  # Beispiel: Anzahl der Knoten
-sparsity = [0.2, 0.5]   # Beispiel: Dichte
-one_divided_samplerate = 10  # Beispiel: Stichprobengröße
+graph = nx.DiGraph()
 
-# Generieren von Graphen
-generated_graphs = generate_random_digraph(node_counts, sparsity, one_divided_samplerate)
-
-
-# Bestimmen der größten Bisimulation
-for graph_list in generated_graphs:
-    for graph in graph_list:
-        bisimulation_result = compute_maximum_bisimulation(graph)
-def graph_factory(adj_matrix):
-    return nx.from_numpy_array(adj_matrix, create_using=nx.DiGraph)
-print(results_df.head())
-# Korrelation zwischen Parametern berechnen
-corr_mat = results_df.corr().stack().reset_index(name="correlation")
-
-# Visualisierung der Korrelationsmatrix
-sns.set_theme(style="whitegrid")
-g = sns.relplot(
-    data=corr_mat,
-    x="level_0", y="level_1", hue="correlation", size="correlation",
-    palette="vlag", hue_norm=(-1, 1), edgecolor=".7",
-    height=10, sizes=(50, 250), size_norm=(-.2, .8),
-)
-
-# Einstellen des Diagramms
-g.set(xlabel="", ylabel="", aspect="equal")
-g.despine(left=True, bottom=True)
-g.ax.margins(.02)
-for label in g.ax.get_xticklabels():
-    label.set_rotation(90)
-# Erstellen der Korrelationsmatrix
-
-# Erstellen eines leeren DataFrames
-results_df = pd.DataFrame(columns=["Node_Count", "Sparsity", "Bisimulation_Size"])
-
-# Durchlaufen der generierten Graphen und Berechnung der Bisimulation
-for node_count_idx, node_count in enumerate(node_counts):
-    for sparsity_idx, sparsity_value in enumerate(sparsity):
-        for graph in generated_graphs[node_count_idx][sparsity_idx]:
-            # Überprüfen Sie, ob der Graph ein nx.DiGraph ist
-            if isinstance(graph, nx.DiGraph):
-                try:
-                    bisimulation_result = compute_maximum_bisimulation(graph)
-                    bisimulation_size = len(bisimulation_result)  # Größe der Äquivalenzklassen
-                    results_df = results_df.append({"Node_Count": node_count, "Sparsity": sparsity_value, "Bisimulation_Size": bisimulation_size}, ignore_index=True)
-                except Exception as e:
-                    print(f"Ein Fehler ist aufgetreten: {e}")
-            else:
-                print("Der Graph ist nicht vom Typ nx.DiGraph")
+graph.add_node("1")
+graph.add_node("2a")
+graph.add_node("2b")
+graph.add_node("2c")
+graph.add_node("3a")
+graph.add_node("3b")
+graph.add_node("3c")
+graph.add_node("3d")
 
 
-# Weiterverarbeitung des DataFrames für die Darstellung
+graph.add_edge("1", "2b")
+graph.add_edge("1", "3c")
+graph.add_edge("1", "3b")
+graph.add_edge("1", "2c")
+graph.add_edge("2a", "2c")
+graph.add_edge("2a", "3a")
+graph.add_edge("2b", "2a")
+graph.add_edge("2b", "3b")
+graph.add_edge("2c", "2b")
+graph.add_edge("2c", "3c")
 
-corr_mat = results_df.corr().stack().reset_index(name="correlation")
+# Here your function is used, which outputs the following 
+compute_maximum_bisimulation(graph)
+# ...
+[(2a,2b,2c),(3a,3b,3c,1)]
 
-# Visualisierung der Korrelationsmatrix
-sns.set_theme(style="whitegrid")
-g = sns.relplot(
-    data=corr_mat,
-    x="level_0", y="level_1", hue="correlation", size="correlation",
-    palette="vlag", hue_norm=(-1, 1), edgecolor=".7",
-    height=10, sizes=(50, 250), size_norm=(-.2, .8),
-)
-
-# Tweak the figure to finalize
-g.set(xlabel="", ylabel="", aspect="equal")
-g.despine(left=True, bottom=True)
-g.ax.margins(.02)
-for label in g.ax.get_xticklabels():
-    label.set_rotation(90)
+# We concluded that this means 2 eq.-classes but Prof. Moss says, there needs to be three: 
 
 
-sns.set_theme(style="whitegrid")
 
-# Load the brain networks dataset, select subset, and collapse the multi-index
-df = compute_maximum_bisimulation
+#Hello Professor Moss,
 
-used_networks = [generated_graphs]
+#I have recently studied the anti-foundation axiom and came across your Stanford encyclopedia article. To gain a deeper understanding off bisimulations and quotient graphs I attempted to reproduce the bisimulation from the article using an open source implementation of the algorithm (https://joss.theoj.org/papers/10.21105/joss.03519). However the generated bisimulation only has two equivalence classes. (https://github.com/BigMo0208/bispy-test)
 
-used_columns = (df.columns.get_level_values("network").astype(int).isin(used_networks))
+#Is the bisimulation used in non well-founded set theory different to the bisimulations from graph/automata theory?
 
-df = df.loc[:, used_columns]
 
-df.columns = df.columns.map("-".join)
+#As a self taught mathematician any clarification or insight you could provide on this topic would greatly help me develop a deeper understanding of Your theory and its applications.
+#I thank You in advance for your time and valuable insights. Your work has deeply inspired me and I look forward to learning more about it.
 
-# Compute a correlation matrix and convert to long-form
-corr_mat = df.corr().stack().reset_index(name="correlation")
 
-# Draw each cell as a scatter point with varying size and color
-g = sns.relplot(
-    data=corr_mat,
-    x="level_0", y="level_1", hue="correlation", size="correlation",
-    palette="vlag", hue_norm=(-1, 1), edgecolor=".7",
-    height=10, sizes=(50, 250), size_norm=(-.2, .8),
-)
+#Dear Moritz Ackermann,
 
-# Tweak the figure to finalize
-g.set(xlabel="", ylabel="", aspect="equal")
-g.despine(left=True, bottom=True)
-g.ax.margins(.02)
-for label in g.ax.get_xticklabels():
-    label.set_rotation(90)
+#The bisimulation used in non well-founded set theory is basically the same as the bisimulation from graph/automata theory: one takes a set T (usually a transitive set), and turns it into a graph by the definition 
+
+ #  x --> y  if and only if y is an element of x
+
+#Then one applies the definition of bisimulation from graphs/automata.
+
+#I haven't looked at your github link, but I have an idea that could clarify things for you.  There is a difference between a bisimulation and the largest bisimulation. Perhaps this is old news to you, but the largest bisumulation on a given graph is the union of all the bisumulations on it.  But there are many bisimulations on a given graph – for example, the empty relation would be one.  My guess is that the implementation that you were using computed the largest one (since this is the main one of interest in practice).   
+
+#Does this help?
+
+ #     Larry Moss
+
